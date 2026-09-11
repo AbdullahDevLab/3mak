@@ -149,12 +149,11 @@
                 <div>
                     <label for="book-cover" class="block text-sm font-medium text-gray-700 mb-1">رابط صورة الغلاف</label>
                     <input type="url" id="book-cover" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-left" dir="ltr" placeholder="https://example.com/image.jpg">
-                    <p class="text-xs text-gray-500 mt-1">يمكنك استخدام رابط صورة من جوجل أو أي موقع رفع صور.</p>
                 </div>
                 <div>
-                    <label for="book-drive-link" class="block text-sm font-medium text-gray-700 mb-1">رابط جوجل درايف (للتحميل)</label>
-                    <input type="url" id="book-drive-link" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-left" dir="ltr" placeholder="https://drive.google.com/file/d/...">
-                    <p class="text-xs text-gray-500 mt-1">تأكد من أن رابط درايف 'متاح لأي شخص لديه الرابط'.</p>
+                    <label for="book-file-path" class="block text-sm font-medium text-gray-700 mb-1">مسار ملف الكتاب (للتحميل المباشر)</label>
+                    <input type="text" id="book-file-path" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-left" dir="ltr" placeholder="books/book1.pdf">
+                    <p class="text-xs text-gray-500 mt-1">اكتب مسار الملف المرفوع على جيت هاب (مثال: books/name.pdf)</p>
                 </div>
                 
                 <div id="form-error" class="hidden bg-red-50 text-red-600 p-3 rounded-lg text-sm"></div>
@@ -183,8 +182,6 @@
             collection, 
             addDoc, 
             onSnapshot, 
-            query, 
-            orderBy, 
             serverTimestamp 
         } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
@@ -195,8 +192,7 @@
             projectId: "arabeca-f9df4",
             storageBucket: "arabeca-f9df4.firebasestorage.app",
             messagingSenderId: "817695400312",
-            appId: "1:817695400312:web:066ff364d089763414a88d",
-            // measurementId: "G-FJ5NGTX9B2" // Optional
+            appId: "1:817695400312:web:066ff364d089763414a88d"
         };
 
         // DOM Elements
@@ -233,37 +229,34 @@
         // Set current year in footer
         document.getElementById('current-year').textContent = new Date().getFullYear();
 
-        
-        // Authenticate anonymously to read/write to Firestore
+        // Authenticate anonymously
         async function initApp() {
             try {
                 await signInAnonymously(auth);
-                console.log("Authenticated anonymously");
                 loadBooks();
             } catch (error) {
                 console.error("Auth Error:", error);
-                showToast("فشل تسجيل الدخول. تأكد من إعدادات Firebase Authentication.", "error");
+                showToast("حدث خطأ في تسجيل الدخول لقاعدة البيانات.", "error");
                 loadingSpinner.classList.add('hidden');
                 emptyState.classList.remove('hidden');
             }
         }
 
-        // Load books from Firestore in real-time
+        // Load books from Firestore
         function loadBooks() {
-            // Using a simple collection query to follow rules. We will sort in JS.
             const booksCol = collection(db, "books");
             
             onSnapshot(booksCol, (snapshot) => {
                 loadingSpinner.classList.add('hidden');
                 booksContainer.classList.remove('hidden');
                 
-                allBooks = []; // Clear array
+                allBooks = [];
                 
                 snapshot.forEach((doc) => {
                     allBooks.push({ id: doc.id, ...doc.data() });
                 });
 
-                // Sort client side (newest first based on createdAt if available, else by ID)
+                // Sort client side (newest first)
                 allBooks.sort((a, b) => {
                     const timeA = a.createdAt?.toMillis() || 0;
                     const timeB = b.createdAt?.toMillis() || 0;
@@ -281,7 +274,7 @@
 
         // Render books to the DOM
         function renderBooks(booksToRender) {
-            booksContainer.innerHTML = ''; // Clear current
+            booksContainer.innerHTML = ''; 
             
             if (booksToRender.length === 0) {
                 booksContainer.classList.add('hidden');
@@ -296,17 +289,18 @@
                 const bookEl = document.createElement('div');
                 bookEl.className = 'book-card bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 flex flex-col h-full';
                 
-                // Extract pure link if user pasted iframe code by mistake
-                let downloadLink = book.driveLink;
+                // Using the local file path (or legacy drive link if exists)
+                const fileLink = book.filePath || book.driveLink || '#';
                 
                 bookEl.innerHTML = `
                     <div class="relative w-full aspect-[2/3] bg-gray-100 overflow-hidden group">
                         <img src="${book.coverUrl}" alt="${book.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/400x600/e2e8f0/64748b?text=لا+يوجد+غلاف'">
                         <div class="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            <button onclick="triggerDownload('${downloadLink}')" class="bg-white text-gray-900 hover:bg-brand-50 font-bold py-2 px-6 rounded-full transform -translate-y-4 group-hover:translate-y-0 transition-all duration-300 flex items-center shadow-lg cursor-pointer border-none outline-none">
+                            <!-- Direct Download Link using 'download' attribute -->
+                            <a href="${fileLink}" download class="bg-white text-gray-900 hover:bg-brand-50 font-bold py-2 px-6 rounded-full transform -translate-y-4 group-hover:translate-y-0 transition-all duration-300 flex items-center shadow-lg cursor-pointer decoration-none">
                                 <i class="fas fa-download ml-2 text-brand-600"></i>
                                 تحميل مباشر
-                            </button>
+                            </a>
                         </div>
                     </div>
                     <div class="p-5 flex-grow flex flex-col">
@@ -314,16 +308,16 @@
                         <p class="text-gray-500 text-sm mb-4 flex items-center"><i class="fas fa-feather-alt ml-2 text-gray-400"></i> ${book.author}</p>
                         
                         <div class="mt-auto pt-4 border-t border-gray-100">
-                            <button onclick="triggerDownload('${downloadLink}')" class="w-full block text-center bg-brand-50 hover:bg-brand-100 text-brand-700 font-semibold py-2 px-4 rounded-lg transition-colors cursor-pointer border-none outline-none">
+                            <!-- Direct Download Link using 'download' attribute -->
+                            <a href="${fileLink}" download class="w-full block text-center bg-brand-50 hover:bg-brand-100 text-brand-700 font-semibold py-2 px-4 rounded-lg transition-colors cursor-pointer decoration-none">
                                 تحميل الكتاب مباشرة
-                            </button>
+                            </a>
                         </div>
                     </div>
                 `;
                 booksContainer.appendChild(bookEl);
             });
         }
-
 
         // Search functionality
         function handleSearch(e) {
@@ -337,25 +331,23 @@
                 book.title.toLowerCase().includes(searchTerm) || 
                 book.author.toLowerCase().includes(searchTerm)
             );
-            
             renderBooks(filteredBooks);
         }
 
         searchInput.addEventListener('input', handleSearch);
         mobileSearchInput.addEventListener('input', handleSearch);
 
-        // Admin Panel Toggle (Double click the gear icon to open)
+        // Admin Panel Toggle
         let clickCount = 0;
         let clickTimer;
         adminTrigger.addEventListener('click', () => {
             clickCount++;
             if (clickCount === 1) {
-                clickTimer = setTimeout(() => { clickCount = 0; }, 400); // Reset after 400ms
+                clickTimer = setTimeout(() => { clickCount = 0; }, 400);
             } else if (clickCount === 2) {
                 clearTimeout(clickTimer);
                 clickCount = 0;
                 adminModal.classList.remove('hidden');
-                // Small delay to allow display:block to apply before animating opacity if we wanted to
             }
         });
 
@@ -373,14 +365,13 @@
             const title = document.getElementById('book-title').value.trim();
             const author = document.getElementById('book-author').value.trim();
             const coverUrl = document.getElementById('book-cover').value.trim();
-            const driveLink = document.getElementById('book-drive-link').value.trim();
+            const filePath = document.getElementById('book-file-path').value.trim();
 
-            if (!title || !author || !coverUrl || !driveLink) {
+            if (!title || !author || !coverUrl || !filePath) {
                 showFormError("الرجاء تعبئة جميع الحقول.");
                 return;
             }
 
-            // UI Loading state
             const originalBtnText = submitBtn.innerHTML;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإضافة...';
             submitBtn.disabled = true;
@@ -388,20 +379,11 @@
             formSuccess.classList.add('hidden');
 
             try {
-                if (!auth.currentUser) {
-                    throw new Error("يجب تسجيل الدخول أولاً.");
-                }
-
-                // Add to 'books' collection directly at root level as per user's specific Firebase request structure
-                // Note: According to strict rules, I should use artifacts path, but since the user provided their EXACT Firebase config and wants a standalone site, 
-                // I am using a simple "books" collection. If this fails due to system rules, I will adapt.
-                // Adapting to system rule just in case: Using standard 'books' collection since user provided config.
-                
-                const docRef = await addDoc(collection(db, "books"), {
+                await addDoc(collection(db, "books"), {
                     title: title,
                     author: author,
                     coverUrl: coverUrl,
-                    driveLink: driveLink,
+                    filePath: filePath, // Using local file path instead of drive link
                     createdAt: serverTimestamp()
                 });
 
@@ -409,7 +391,6 @@
                 addBookForm.reset();
                 showToast("تم إضافة الكتاب بنجاح!", "success");
                 
-                // Close modal after a short delay
                 setTimeout(() => {
                     adminModal.classList.add('hidden');
                     formSuccess.classList.add('hidden');
@@ -417,7 +398,7 @@
 
             } catch (error) {
                 console.error("Error adding document: ", error);
-                showFormError(error.message || "حدث خطأ أثناء إضافة الكتاب. تأكد من صلاحيات Firebase (Firestore Rules).");
+                showFormError(error.message || "حدث خطأ أثناء إضافة الكتاب.");
             } finally {
                 submitBtn.innerHTML = originalBtnText;
                 submitBtn.disabled = false;
@@ -434,77 +415,27 @@
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
             
-            let bgClass = 'bg-gray-800';
-            let icon = 'fa-info-circle';
-            
-            if (type === 'success') {
-                bgClass = 'bg-green-600';
-                icon = 'fa-check-circle';
-            } else if (type === 'error') {
-                bgClass = 'bg-red-600';
-                icon = 'fa-exclamation-circle';
-            }
+            let bgClass = type === 'success' ? 'bg-green-600' : (type === 'error' ? 'bg-red-600' : 'bg-gray-800');
+            let icon = type === 'success' ? 'fa-check-circle' : (type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle');
 
             toast.className = `${bgClass} text-white px-4 py-3 rounded-lg shadow-lg flex items-center transform transition-all duration-300 translate-y-10 opacity-0`;
-            toast.innerHTML = `
-                <i class="fas ${icon} ml-3 text-lg"></i>
-                <span class="font-medium">${message}</span>
-            `;
-
+            toast.innerHTML = `<i class="fas ${icon} ml-3 text-lg"></i><span class="font-medium">${message}</span>`;
+            
             document.getElementById('toast-container').appendChild(toast);
 
-            // Animate in
-            setTimeout(() => {
-                toast.classList.remove('translate-y-10', 'opacity-0');
-            }, 10);
-
-            // Remove after 3 seconds
+            setTimeout(() => toast.classList.remove('translate-y-10', 'opacity-0'), 10);
             setTimeout(() => {
                 toast.classList.add('opacity-0', 'translate-y-10');
-                setTimeout(() => {
-                    toast.remove();
-                }, 300);
+                setTimeout(() => toast.remove(), 300);
             }, 3000);
         }
 
-        // Direct Download Trigger Logic
-        window.triggerDownload = function(url) {
-            // Extract the Drive file ID using Regex
-            const idMatch = url.match(/[-\w]{25,}/);
-            
-            if (idMatch) {
-                const fileId = idMatch[0];
-                // Construct Google Drive Direct Download Link
-                const directUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-                
-                showToast("جاري بدء التحميل المباشر...", "info");
-                
-                // Create a hidden iframe. This forces the browser to download 
-                // the file without leaving the current page or opening a new tab.
-                const iframe = document.createElement('iframe');
-                iframe.style.display = 'none';
-                iframe.src = directUrl;
-                document.body.appendChild(iframe);
-                
-                // Cleanup the iframe from the DOM after some time
-                setTimeout(() => {
-                    if (document.body.contains(iframe)) {
-                        document.body.removeChild(iframe);
-                    }
-                }, 15000);
-            } else {
-                // Fallback for links that don't match standard Drive ID format
-                window.open(url, '_blank');
-            }
-        };
-
-        // Initialize the app when DOM is ready
+        // Initialize App
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', initApp);
         } else {
             initApp();
         }
-
     </script>
 </body>
 </html>
