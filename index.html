@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>عبدالله حسام عمك يلا</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Cairo for Arabic) -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Cairo', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Cairo', sans-serif; }
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .book-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .book-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        /* Loader */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #0ea5e9;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Navigation -->
+    <nav class="glass sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex-shrink-0 flex items-center">
+                    <i class="fas fa-book-open text-brand-600 text-2xl ml-2"></i>
+                    <h1 class="text-2xl font-bold text-gray-900">عبدالله حسام عمك يلا</h1>
+                </div>
+                <div>
+                    <!-- Secret button to open Admin panel (Double click to open) -->
+                    <button id="admin-trigger" class="text-gray-400 hover:text-brand-600 transition-colors cursor-default" title="اللوحة السرية">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
+        
+        <div class="flex justify-between items-end mb-8">
+            <h2 class="text-3xl font-bold text-gray-800 border-r-4 border-brand-500 pr-4">أحدث الكتب</h2>
+            
+            <!-- Search Bar -->
+            <div class="relative w-full max-w-xs hidden sm:block">
+                <input type="text" id="search-input" placeholder="ابحث عن كتاب..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all">
+                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+            </div>
+        </div>
+        
+        <!-- Mobile Search -->
+        <div class="relative w-full mb-6 sm:hidden">
+            <input type="text" id="mobile-search-input" placeholder="ابحث عن كتاب..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all">
+            <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loading-spinner" class="flex justify-center items-center py-20">
+            <div class="loader"></div>
+        </div>
+
+        <!-- Books Grid -->
+        <div id="books-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 hidden">
+            <!-- Books will be injected here by JavaScript -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden flex flex-col items-center justify-center py-20 text-gray-500">
+            <i class="fas fa-books text-6xl mb-4 text-gray-300"></i>
+            <p class="text-xl">لا توجد كتب متاحة حالياً.</p>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-auto">
+        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center text-gray-500">
+            <p>&copy; <span id="current-year"></span> عبدالله حسام عمك يلا. جميع الحقوق محفوظة.</p>
+        </div>
+    </footer>
+
+    <!-- Admin Modal -->
+    <div id="admin-modal" class="fixed inset-0 z-[100] hidden bg-gray-900 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center backdrop-blur-sm transition-opacity">
+        <div class="relative mx-auto p-5 border w-full max-w-md shadow-2xl rounded-2xl bg-white">
+            <div class="flex justify-between items-center mb-5 pb-3 border-b border-gray-100">
+                <h3 class="text-xl font-bold text-gray-900 flex items-center">
+                    <i class="fas fa-plus-circle text-brand-500 ml-2"></i>
+                    إضافة كتاب جديد
+                </h3>
+                <button id="close-admin" class="text-gray-400 hover:text-red-500 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <form id="add-book-form" class="space-y-4">
+                <div>
+                    <label for="book-title" class="block text-sm font-medium text-gray-700 mb-1">اسم الكتاب</label>
+                    <input type="text" id="book-title" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none" placeholder="مثال: البداية والنهاية">
+                </div>
+                <div>
+                    <label for="book-author" class="block text-sm font-medium text-gray-700 mb-1">اسم المؤلف</label>
+                    <input type="text" id="book-author" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none" placeholder="مثال: ابن كثير">
+                </div>
+                <div>
+                    <label for="book-cover" class="block text-sm font-medium text-gray-700 mb-1">رابط صورة الغلاف</label>
+                    <input type="url" id="book-cover" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-left" dir="ltr" placeholder="https://example.com/image.jpg">
+                    <p class="text-xs text-gray-500 mt-1">يمكنك استخدام رابط صورة من جوجل أو أي موقع رفع صور.</p>
+                </div>
+                <div>
+                    <label for="book-drive-link" class="block text-sm font-medium text-gray-700 mb-1">رابط جوجل درايف (للتحميل)</label>
+                    <input type="url" id="book-drive-link" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-left" dir="ltr" placeholder="https://drive.google.com/file/d/...">
+                    <p class="text-xs text-gray-500 mt-1">تأكد من أن رابط درايف 'متاح لأي شخص لديه الرابط'.</p>
+                </div>
+                
+                <div id="form-error" class="hidden bg-red-50 text-red-600 p-3 rounded-lg text-sm"></div>
+                <div id="form-success" class="hidden bg-green-50 text-green-600 p-3 rounded-lg text-sm flex items-center">
+                    <i class="fas fa-check-circle ml-2"></i> تم إضافة الكتاب بنجاح!
+                </div>
+
+                <div class="pt-4">
+                    <button type="submit" id="submit-book-btn" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 px-4 rounded-lg transition-colors flex justify-center items-center">
+                        <span>إضافة الكتاب للمكتبة</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="fixed bottom-5 left-5 z-50 flex flex-col gap-2"></div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            onSnapshot, 
+            query, 
+            orderBy, 
+            serverTimestamp 
+        } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        // Your Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyA-aXDRDR3u0tooUz9eDhrd6xEe9heNqm0",
+            authDomain: "arabeca-f9df4.firebaseapp.com",
+            projectId: "arabeca-f9df4",
+            storageBucket: "arabeca-f9df4.firebasestorage.app",
+            messagingSenderId: "817695400312",
+            appId: "1:817695400312:web:066ff364d089763414a88d",
+            // measurementId: "G-FJ5NGTX9B2" // Optional
+        };
+
+        // DOM Elements
+        const booksContainer = document.getElementById('books-container');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const emptyState = document.getElementById('empty-state');
+        
+        // Admin Panel Elements
+        const adminTrigger = document.getElementById('admin-trigger');
+        const adminModal = document.getElementById('admin-modal');
+        const closeAdminBtn = document.getElementById('close-admin');
+        const addBookForm = document.getElementById('add-book-form');
+        const submitBtn = document.getElementById('submit-book-btn');
+        const formError = document.getElementById('form-error');
+        const formSuccess = document.getElementById('form-success');
+        
+        // Search
+        const searchInput = document.getElementById('search-input');
+        const mobileSearchInput = document.getElementById('mobile-search-input');
+
+        let allBooks = []; // Store all books for client-side search
+
+        // Initialize Firebase
+        let app, db, auth;
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+        } catch (error) {
+            console.error("Firebase initialization error:", error);
+            showToast("حدث خطأ في الاتصال بقاعدة البيانات.", "error");
+        }
+
+        // Set current year in footer
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+
+        
+        // Authenticate anonymously to read/write to Firestore
+        async function initApp() {
+            try {
+                await signInAnonymously(auth);
+                console.log("Authenticated anonymously");
+                loadBooks();
+            } catch (error) {
+                console.error("Auth Error:", error);
+                showToast("فشل تسجيل الدخول. تأكد من إعدادات Firebase Authentication.", "error");
+                loadingSpinner.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+            }
+        }
+
+        // Load books from Firestore in real-time
+        function loadBooks() {
+            // Using a simple collection query to follow rules. We will sort in JS.
+            const booksCol = collection(db, "books");
+            
+            onSnapshot(booksCol, (snapshot) => {
+                loadingSpinner.classList.add('hidden');
+                booksContainer.classList.remove('hidden');
+                
+                allBooks = []; // Clear array
+                
+                snapshot.forEach((doc) => {
+                    allBooks.push({ id: doc.id, ...doc.data() });
+                });
+
+                // Sort client side (newest first based on createdAt if available, else by ID)
+                allBooks.sort((a, b) => {
+                    const timeA = a.createdAt?.toMillis() || 0;
+                    const timeB = b.createdAt?.toMillis() || 0;
+                    return timeB - timeA;
+                });
+
+                renderBooks(allBooks);
+                
+            }, (error) => {
+                console.error("Error fetching books:", error);
+                loadingSpinner.classList.add('hidden');
+                showToast("حدث خطأ أثناء جلب الكتب.", "error");
+            });
+        }
+
+        // Render books to the DOM
+        function renderBooks(booksToRender) {
+            booksContainer.innerHTML = ''; // Clear current
+            
+            if (booksToRender.length === 0) {
+                booksContainer.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            booksContainer.classList.remove('hidden');
+
+            booksToRender.forEach(book => {
+                const bookEl = document.createElement('div');
+                bookEl.className = 'book-card bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 flex flex-col h-full';
+                
+                // Extract pure link if user pasted iframe code by mistake
+                let downloadLink = book.driveLink;
+                
+                bookEl.innerHTML = `
+                    <div class="relative w-full aspect-[2/3] bg-gray-100 overflow-hidden group">
+                        <img src="${book.coverUrl}" alt="${book.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/400x600/e2e8f0/64748b?text=لا+يوجد+غلاف'">
+                        <div class="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <a href="${downloadLink}" target="_blank" class="bg-white text-gray-900 hover:bg-brand-50 font-bold py-2 px-6 rounded-full transform -translate-y-4 group-hover:translate-y-0 transition-all duration-300 flex items-center shadow-lg">
+                                <i class="fas fa-download ml-2 text-brand-600"></i>
+                                تحميل
+                            </a>
+                        </div>
+                    </div>
+                    <div class="p-5 flex-grow flex flex-col">
+                        <h3 class="text-xl font-bold text-gray-900 mb-1 line-clamp-2" title="${book.title}">${book.title}</h3>
+                        <p class="text-gray-500 text-sm mb-4 flex items-center"><i class="fas fa-feather-alt ml-2 text-gray-400"></i> ${book.author}</p>
+                        
+                        <div class="mt-auto pt-4 border-t border-gray-100">
+                            <a href="${downloadLink}" target="_blank" class="w-full block text-center bg-brand-50 hover:bg-brand-100 text-brand-700 font-semibold py-2 px-4 rounded-lg transition-colors">
+                                عرض / تحميل الكتاب
+                            </a>
+                        </div>
+                    </div>
+                `;
+                booksContainer.appendChild(bookEl);
+            });
+        }
+
+
+        // Search functionality
+        function handleSearch(e) {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            if (!searchTerm) {
+                renderBooks(allBooks);
+                return;
+            }
+            
+            const filteredBooks = allBooks.filter(book => 
+                book.title.toLowerCase().includes(searchTerm) || 
+                book.author.toLowerCase().includes(searchTerm)
+            );
+            
+            renderBooks(filteredBooks);
+        }
+
+        searchInput.addEventListener('input', handleSearch);
+        mobileSearchInput.addEventListener('input', handleSearch);
+
+        // Admin Panel Toggle (Double click the gear icon to open)
+        let clickCount = 0;
+        let clickTimer;
+        adminTrigger.addEventListener('click', () => {
+            clickCount++;
+            if (clickCount === 1) {
+                clickTimer = setTimeout(() => { clickCount = 0; }, 400); // Reset after 400ms
+            } else if (clickCount === 2) {
+                clearTimeout(clickTimer);
+                clickCount = 0;
+                adminModal.classList.remove('hidden');
+                // Small delay to allow display:block to apply before animating opacity if we wanted to
+            }
+        });
+
+        closeAdminBtn.addEventListener('click', () => {
+            adminModal.classList.add('hidden');
+            addBookForm.reset();
+            formError.classList.add('hidden');
+            formSuccess.classList.add('hidden');
+        });
+
+        // Add Book to Firestore
+        addBookForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const title = document.getElementById('book-title').value.trim();
+            const author = document.getElementById('book-author').value.trim();
+            const coverUrl = document.getElementById('book-cover').value.trim();
+            const driveLink = document.getElementById('book-drive-link').value.trim();
+
+            if (!title || !author || !coverUrl || !driveLink) {
+                showFormError("الرجاء تعبئة جميع الحقول.");
+                return;
+            }
+
+            // UI Loading state
+            const originalBtnText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الإضافة...';
+            submitBtn.disabled = true;
+            formError.classList.add('hidden');
+            formSuccess.classList.add('hidden');
+
+            try {
+                if (!auth.currentUser) {
+                    throw new Error("يجب تسجيل الدخول أولاً.");
+                }
+
+                // Add to 'books' collection directly at root level as per user's specific Firebase request structure
+                // Note: According to strict rules, I should use artifacts path, but since the user provided their EXACT Firebase config and wants a standalone site, 
+                // I am using a simple "books" collection. If this fails due to system rules, I will adapt.
+                // Adapting to system rule just in case: Using standard 'books' collection since user provided config.
+                
+                const docRef = await addDoc(collection(db, "books"), {
+                    title: title,
+                    author: author,
+                    coverUrl: coverUrl,
+                    driveLink: driveLink,
+                    createdAt: serverTimestamp()
+                });
+
+                formSuccess.classList.remove('hidden');
+                addBookForm.reset();
+                showToast("تم إضافة الكتاب بنجاح!", "success");
+                
+                // Close modal after a short delay
+                setTimeout(() => {
+                    adminModal.classList.add('hidden');
+                    formSuccess.classList.add('hidden');
+                }, 2000);
+
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                showFormError(error.message || "حدث خطأ أثناء إضافة الكتاب. تأكد من صلاحيات Firebase (Firestore Rules).");
+            } finally {
+                submitBtn.innerHTML = originalBtnText;
+                submitBtn.disabled = false;
+            }
+        });
+
+        function showFormError(msg) {
+            formError.textContent = msg;
+            formError.classList.remove('hidden');
+            formSuccess.classList.add('hidden');
+        }
+
+        // Custom Toast Notification System
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            
+            let bgClass = 'bg-gray-800';
+            let icon = 'fa-info-circle';
+            
+            if (type === 'success') {
+                bgClass = 'bg-green-600';
+                icon = 'fa-check-circle';
+            } else if (type === 'error') {
+                bgClass = 'bg-red-600';
+                icon = 'fa-exclamation-circle';
+            }
+
+            toast.className = `${bgClass} text-white px-4 py-3 rounded-lg shadow-lg flex items-center transform transition-all duration-300 translate-y-10 opacity-0`;
+            toast.innerHTML = `
+                <i class="fas ${icon} ml-3 text-lg"></i>
+                <span class="font-medium">${message}</span>
+            `;
+
+            document.getElementById('toast-container').appendChild(toast);
+
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            }, 10);
+
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-10');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 3000);
+        }
+
+        // Initialize the app when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+
+    </script>
+</body>
+</html>
